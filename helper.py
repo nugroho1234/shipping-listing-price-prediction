@@ -1,7 +1,8 @@
 import pandas as pd
-
+from unidecode import unidecode
 import numpy as np
 import re
+from typing import List
 
 import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -17,13 +18,13 @@ import re
 import nltk
 from nltk.corpus import stopwords
 
-def clip_outliers(df,col):
+def clip_outliers(df, col: str):
     q1 = df[col].quantile(0.25)
     q3 = df[col].quantile(0.75)
     upper_threshold = q3 + (1.5 * (q3 - q1))
     df[col] = df[col].clip(upper=upper_threshold)
 
-def impute_knn(df, subset, text_columns):
+def impute_knn(df, subset: str, text_columns: List):
     #divide data into 2
     data_complete = df.dropna(subset=subset).reset_index(drop = True)
     data_missing = df[df[subset].isnull()].reset_index(drop = True)
@@ -109,7 +110,7 @@ stoplist = ["i","project","living","home",'apartment',"pune","me","my","myself",
 
 STOPWORDS_nlp.update(stoplist)
     
-def text_prepare(text):
+def text_prepare(text: str):
     """
         text: a string
         
@@ -126,7 +127,7 @@ def text_prepare(text):
     text = text.strip()
     return text
 
-def pos_counter(x,pos):
+def pos_counter(x: str,pos: str):
     """
     Returns the count for the given parts of speech tag
     
@@ -196,6 +197,7 @@ def create_features(df):
     df['avg_price_by_category'] = df['category'].apply(lambda x: price_by_category.get(x, average_value_category))
     df['avg_price_by_category'] = df['avg_price_by_category'].astype('float')
     
+    '''
     #one hot encode
     
     df = pd.get_dummies(df, columns=['category'], prefix='category', drop_first=True)
@@ -222,7 +224,53 @@ def create_features(df):
     for col in country_columns:
         df[col] = df[col].astype('float')
     
-    one_hot_cols = category_columns + fuel_columns + hull_columns + country_columns
+    #one_hot_cols = category_columns + fuel_columns + hull_columns + country_columns
+    '''
     df.drop(['description'], axis=1,inplace=True)
     
-    return df, one_hot_cols
+    df = df.applymap(lambda x: x if not isinstance(x, str) or not has_non_ascii(x) else x.encode('ascii', 'ignore').decode('ascii'))
+    string_categorical_cols = ['model', 'category', 'hull_material', 'country', 'fuel_type']
+    for col in string_categorical_cols:
+        df[col] = clean_columns(df[col].tolist())
+    
+    #cleaning column names
+    df.columns = clean_columns(df.columns)
+    column_names = df.columns
+    
+    '''
+    category_columns = [col for col in column_names if col.startswith('category')]
+    fuel_columns = [col for col in column_names if col.startswith('fuel')]
+    hull_columns = [col for col in column_names if col.startswith('hull')]
+    country_columns = [col for col in column_names if col.startswith('country')]
+    
+    
+    one_hot_cols = category_columns + fuel_columns + hull_columns + country_columns
+    '''
+
+    return df, column_names
+
+def clean_columns(column_list: List):
+    all_cols = column_list
+    
+    modified_list = []
+
+    for item in all_cols:
+        item = str(item).lower()
+        modified_item = re.sub(r'[^a-zA-Z0-9]', '_', item)
+        modified_list.append(modified_item)
+    
+    final_list = []
+    
+    for i in modified_list:
+        cleaned_column_name = re.sub(r'_+', '_', i)
+        final_list.append(cleaned_column_name)
+    
+    final_list = [col.strip('_') for col in final_list]
+        
+    return final_list
+
+def has_non_ascii(s):
+    for char in s:
+        if ord(char) > 127:
+            return True
+    return False
