@@ -2,7 +2,6 @@ import pandas as pd
 from unidecode import unidecode
 import numpy as np
 import re
-from typing import List
 
 import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -26,7 +25,7 @@ def clip_outliers(df, col: str):
     upper_threshold = q3 + (1.5 * (q3 - q1))
     df[col] = df[col].clip(upper=upper_threshold)
 
-def impute_knn(df, subset: str, text_columns: List):
+def impute_knn(df, subset: str, text_columns):
     #divide data into 2
     data_complete = df.dropna(subset=subset).reset_index(drop = True)
     data_missing = df[df[subset].isnull()].reset_index(drop = True)
@@ -251,7 +250,7 @@ def create_features(df):
 
     return df, column_names
 
-def clean_columns(column_list: List):
+def clean_columns(column_list):
     all_cols = column_list
     
     modified_list = []
