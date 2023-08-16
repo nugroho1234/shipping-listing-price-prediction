@@ -18,6 +18,8 @@ import re
 import nltk
 from nltk.corpus import stopwords
 
+import tensorflow as tf
+
 def clip_outliers(df, col: str):
     q1 = df[col].quantile(0.25)
     q3 = df[col].quantile(0.75)
@@ -274,3 +276,44 @@ def has_non_ascii(s):
         if ord(char) > 127:
             return True
     return False
+
+def build_pred_dict(input_dict, tfidf_object, price_by_hull_material, price_by_fuel_type, price_by_category):
+    pred_dict = {}
+    pred_dict['year'] = input_dict['year']
+    pred_dict['model'] = clean_columns([input_dict['model']])[0]
+    pred_dict['category'] = clean_columns([input_dict['category']])[0]
+    
+    pred_dict['length'] = input_dict['length']
+    pred_dict['fuel_type'] = clean_columns([input_dict['fuel_type']])[0]
+    pred_dict['hull_material'] = clean_columns([input_dict['hull_material']])[0]
+    pred_dict['country'] = clean_columns([input_dict['country']])[0]
+    
+    desc_text = text_prepare(input_dict['description'])
+    
+    pred_dict['noun_counts'] = float(pos_counter(desc_text,'NN'))
+    pred_dict['verb_counts'] = float(pos_counter(desc_text,'VB')) + float(pos_counter(desc_text,'RB'))
+    pred_dict['adjective_counts'] = float(pos_counter(desc_text,'JJ'))
+    
+    tfidf_transform = tfidf_object.transform([input_dict['description']])
+    tfidf_df = pd.DataFrame(tfidf_transform.toarray(), columns=clean_columns(tfidf_object.get_feature_names_out()))
+    tfidf_dict = tfidf_df.iloc[0].to_dict()
+    
+    pred_dict.update(tfidf_dict)
+    
+    average_value_hull_material = sum(price_by_hull_material.values()) / len(price_by_hull_material)
+    average_value_fuel_type = sum(price_by_fuel_type.values()) / len(price_by_fuel_type)
+    average_value_category = sum(price_by_category.values()) / len(price_by_category)
+    
+    pred_dict['avg_price_by_hull_material'] = price_by_hull_material.get(pred_dict['hull_material'], average_value_hull_material)
+    pred_dict['avg_price_by_fuel_type'] = price_by_fuel_type.get(pred_dict['fuel_type'], average_value_fuel_type)
+    pred_dict['avg_price_by_category'] = price_by_category.get(pred_dict['category'], average_value_category)
+    
+    converted_dict = {}
+
+    for key, value in pred_dict.items():
+        converted_value = tf.convert_to_tensor([value])
+        converted_dict[key] = converted_value
+
+    return converted_dict
+    
+    return converted_dict
