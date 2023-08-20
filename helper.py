@@ -1,5 +1,10 @@
+import sys
+import os
+
+parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+sys.path.append(parent_dir)
+
 import pandas as pd
-from unidecode import unidecode
 import numpy as np
 import re
 
@@ -158,7 +163,7 @@ def create_features(df):
         df[col] = df[col].astype('float')
     
     #load tfidf_vectorizer, transform the description column
-    fileName = 'model/tfidf_vectorizer.pkl'
+    fileName = parent_dir + '\\' + 'model/tfidf_vectorizer.pkl'
     with open(fileName,'rb') as f:
         tfidf_object = pickle.load(f)
         
@@ -174,7 +179,7 @@ def create_features(df):
         df[col] = df[col].astype('float')
     
     #price-based features
-    fileName = 'model/price_by_hull_material.pkl'
+    fileName = parent_dir + '\\' + 'model/price_by_hull_material.pkl'
     with open(fileName,'rb') as f:
         price_by_hull_material = pickle.load(f)
     
@@ -182,7 +187,7 @@ def create_features(df):
     df['avg_price_by_hull_material'] = df['hull_material'].apply(lambda x: price_by_hull_material.get(x, average_value_hull_material))
     df['avg_price_by_hull_material'] = df['avg_price_by_hull_material'].astype('float')
     
-    fileName = 'model/price_by_fuel_type.pkl'
+    fileName = parent_dir + '\\' + 'model/price_by_fuel_type.pkl'
     with open(fileName,'rb') as f:
         price_by_fuel_type = pickle.load(f)
     
@@ -190,7 +195,7 @@ def create_features(df):
     df['avg_price_by_fuel_type'] = df['fuel_type'].apply(lambda x: price_by_fuel_type.get(x, average_value_fuel_type))
     df['avg_price_by_fuel_type'] = df['avg_price_by_fuel_type'].astype('float')
     
-    fileName = 'model/price_by_category.pkl'
+    fileName = parent_dir + '\\' + 'model/price_by_category.pkl'
     with open(fileName,'rb') as f:
         price_by_category = pickle.load(f)
     
@@ -198,35 +203,7 @@ def create_features(df):
     df['avg_price_by_category'] = df['category'].apply(lambda x: price_by_category.get(x, average_value_category))
     df['avg_price_by_category'] = df['avg_price_by_category'].astype('float')
     
-    '''
-    #one hot encode
-    
-    df = pd.get_dummies(df, columns=['category'], prefix='category', drop_first=True)
-    column_names = df.columns
-    category_columns = [col for col in column_names if col.startswith('category')]
-    for col in category_columns:
-        df[col] = df[col].astype('float')
-    
-    df = pd.get_dummies(df, columns=['fuel_type'], prefix='fuel', drop_first=True)
-    column_names = df.columns
-    fuel_columns = [col for col in column_names if col.startswith('fuel')]
-    for col in fuel_columns:
-        df[col] = df[col].astype('float')
-    
-    df = pd.get_dummies(df, columns=['hull_material'], prefix='hull', drop_first=True)
-    column_names = df.columns
-    hull_columns = [col for col in column_names if col.startswith('hull')]
-    for col in hull_columns:
-        df[col] = df[col].astype('float')
-    
-    df = pd.get_dummies(df, columns=['country'], prefix='country', drop_first=True)
-    column_names = df.columns
-    country_columns = [col for col in column_names if col.startswith('country')]
-    for col in country_columns:
-        df[col] = df[col].astype('float')
-    
-    #one_hot_cols = category_columns + fuel_columns + hull_columns + country_columns
-    '''
+   
     df.drop(['description'], axis=1,inplace=True)
     
     df = df.applymap(lambda x: x if not isinstance(x, str) or not has_non_ascii(x) else x.encode('ascii', 'ignore').decode('ascii'))
@@ -313,6 +290,4 @@ def build_pred_dict(input_dict, tfidf_object, price_by_hull_material, price_by_f
         converted_value = tf.convert_to_tensor([value])
         converted_dict[key] = converted_value
 
-    return converted_dict
-    
-    return converted_dict
+    return converted_dict, pred_dict
