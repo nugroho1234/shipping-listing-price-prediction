@@ -40,7 +40,6 @@ def index():
 def predict_price(data: ShipPricePred):
     #convert JSON payload to dictionary
     data = data.dict()
-    print(data)
     
     #use helper function to clean data and create features
     sample,_ = helper.build_pred_dict(data, tfidf_object, price_by_hull_material, price_by_fuel_type, price_by_category)
